@@ -1,30 +1,25 @@
-TIMEBEAT ULTRA – GitHub Pages / PWA (Handyfreundliche Version)
+TIMEBEAT ULTRA v8.13 – GitHub/iPhone Fix
 
-UPLOAD ZU GITHUB
-1. Diese ZIP-Datei entpacken.
-2. In deinem Repository:
-   Add file -> Upload files
-3. ALLE Dateien direkt hochladen:
-   - index.html
-   - manifest.webmanifest
-   - sw.js
-   - README.txt
-   - .nojekyll
-   - icon-192.png
-   - icon-512.png
-4. Commit changes.
+WAS WURDE BEHOBEN?
+- Das Startformular steht direkt im HTML.
+- Alle Event-Handler werden erst nach DOMContentLoaded gesetzt.
+- Der Fehler, der JavaScript vor der Startinitialisierung abgebrochen hat, ist beseitigt.
+- PWA-Cache wurde auf v8.13 geändert.
 
-Es gibt KEINEN Unterordner mehr. Die beiden Icons liegen direkt im Hauptverzeichnis.
+UPLOAD:
+Diese Dateien im GitHub-Repository ersetzen/hochladen:
+index.html
+manifest.webmanifest
+sw.js
+.nojekyll
+icon-192.png
+icon-512.png
 
-GITHUB PAGES
-Settings -> Pages
-Source: Deploy from a branch
-Branch: main
-Folder: / (root)
-Save
+Danach GitHub Pages kurz neu deployen lassen.
 
-Danach:
-https://DEINNAME.github.io/timebeat-ultra/
+IPHONE:
+Zum ersten Test in Safari unbedingt öffnen:
+https://acksi71.github.io/Timebeat/?v=813
 
-iPhone/iPad:
-Safari -> Teilen -> Zum Home-Bildschirm
+Wenn unten rechts "v8.13" steht, ist sicher die neue Datei geladen.
+Danach kann die alte Home-Screen-Version gelöscht und neu zum Home-Bildschirm hinzugefügt werden.

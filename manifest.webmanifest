@@ -2,7 +2,7 @@
   "name": "TIMEBEAT ULTRA von V.Acksen",
   "short_name": "TIMEBEAT",
   "description": "Musik-Timeline-Quiz",
-  "start_url": "./index.html",
+  "start_url": "./index.html?v=813",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
