@@ -1,25 +1,19 @@
-TIMEBEAT ULTRA v8.13 – GitHub/iPhone Fix
+TIMEBEAT ULTRA v8.14 – iPhone Preview Fix
 
-WAS WURDE BEHOBEN?
-- Das Startformular steht direkt im HTML.
-- Alle Event-Handler werden erst nach DOMContentLoaded gesetzt.
-- Der Fehler, der JavaScript vor der Startinitialisierung abgebrochen hat, ist beseitigt.
-- PWA-Cache wurde auf v8.13 geändert.
+Behoben:
+- Preview-Fehler werden nicht mehr als dauerhaftes null gecacht.
+- iTunes-Suche probiert Fetch und JSONP sowie DE/US/GB.
+- Mehr Suchvarianten und bessere Trefferbewertung.
+- Kein automatisches Überspringen mehr bei fehlender Preview.
+- Auf iPhone startet eine noch nicht vorgeladene Preview bewusst erst beim zweiten Tipp:
+  1. Tipp lädt/sucht den Ausschnitt.
+  2. Tipp startet Audio direkt aus der Nutzergeste.
+- Wenn keine Preview existiert: Button „Anderen Song“.
 
-UPLOAD:
-Diese Dateien im GitHub-Repository ersetzen/hochladen:
-index.html
-manifest.webmanifest
-sw.js
-.nojekyll
-icon-192.png
-icon-512.png
+GitHub:
+Alle Dateien dieses Pakets über die vorhandenen Dateien hochladen und committen.
 
-Danach GitHub Pages kurz neu deployen lassen.
+Test danach in Safari:
+https://acksi71.github.io/Timebeat/?v=814
 
-IPHONE:
-Zum ersten Test in Safari unbedingt öffnen:
-https://acksi71.github.io/Timebeat/?v=813
-
-Wenn unten rechts "v8.13" steht, ist sicher die neue Datei geladen.
-Danach kann die alte Home-Screen-Version gelöscht und neu zum Home-Bildschirm hinzugefügt werden.
+Unten rechts muss v8.14 stehen.

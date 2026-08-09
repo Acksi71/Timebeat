@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>TIMEBEAT ULTRA v8.13 von V.Acksen</title>
+<title>TIMEBEAT ULTRA v8.14 von V.Acksen</title>
 <style>
 :root{--bg:#090a0e;--panel:#171923;--panel2:#232633;--txt:#f4f5f7;--muted:#9da4b7;--green:#1ed760;--gold:#f3c95e;--red:#ff5d73}
 *{box-sizing:border-box} html,body{height:100%;overflow:hidden}body{margin:0;background:radial-gradient(circle at top,#252a3b 0,#101219 38%,#07080b 100%);color:var(--txt);font-family:Inter,system-ui,sans-serif}
@@ -638,9 +638,9 @@ body:not(.game-started) #gameShell{display:none !important}
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TIMEBEAT ULTRA">
 <meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="./manifest.webmanifest?v=813">
+<link rel="manifest" href="./manifest.webmanifest?v=814">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<style id="v813-ios-fix">
+<style id="v814-ios-fix">
 :root{
  --safe-top:env(safe-area-inset-top,0px);
  --safe-right:env(safe-area-inset-right,0px);
@@ -731,6 +731,8 @@ function setup(){
 }
 function draw(exclude){let ix=deck.findIndex(s=>!exclude.includes(s.artist+"|"+s.title));if(ix<0){deck=shuffle(pool);ix=0}return deck.splice(ix,1)[0]}
 function nextRound(){$("answerModal")?.classList.remove("show");
+ preparedUrl=null;previewUnavailable=false;prefetching=null;
+ $("play").textContent="▶ 30 Sek. abspielen";$("play").disabled=false;
  stop(); selected=null;locked=false;remaining=30;$("timer").textContent=30;$("reveal").classList.remove("show");$("lock").disabled=true;
  current=draw(players.flatMap(p=>p.line.map(x=>x.artist+"|"+x.title)));
  $("play").disabled=false;$("play").textContent="▶ 30 Sek. abspielen";$("clipstate").textContent="Song bereit";$("cliphint").textContent="Titel und Interpret bleiben verborgen";if($("startupHint"))$("startupHint").textContent=players[turn].name+" ist dran – Song starten";
@@ -768,52 +770,101 @@ function renderTimeline(){
  e.style.display="flex";
 }
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function jsonp(url, timeout=7000){
+function jsonp(url, timeout=8000){
  return new Promise((resolve,reject)=>{
-   const cb="tbcb_"+Math.random().toString(36).slice(2);
+   const cb="tbcb_"+Date.now()+"_"+Math.random().toString(36).slice(2);
    const sc=document.createElement("script");
+   let finished=false;
    const tid=setTimeout(()=>done(null,new Error("timeout")),timeout);
-   function done(data,err){clearTimeout(tid);try{delete window[cb]}catch(e){};sc.remove();err?reject(err):resolve(data)}
+   function done(data,err){
+     if(finished)return; finished=true;
+     clearTimeout(tid);
+     try{delete window[cb]}catch(e){}
+     try{sc.remove()}catch(e){}
+     err?reject(err):resolve(data);
+   }
    window[cb]=data=>done(data,null);
    sc.onerror=()=>done(null,new Error("jsonp"));
-   sc.src=url+(url.includes("?")?"&":"?")+"callback="+cb;
+   sc.src=url+(url.includes("?")?"&":"?")+"callback="+encodeURIComponent(cb)+"&_="+Date.now();
    document.head.appendChild(sc);
  });
 }
 function norm(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim()}
+function cleanArtist(x){return String(x||"").replace(/\b(feat\.?|ft\.?|featuring)\b.*$/i,"").replace(/\s+[xX&]\s+.*$/,"").trim()}
+function cleanTitle(x){return String(x||"").replace(/\([^)]*(remaster|live|version|edit|mix)[^)]*\)/ig,"").replace(/\s*-\s*(remaster|live|radio edit|edit|version).*$/i,"").trim()}
 function scoreHit(x,s){
- const a=norm(s.artist.replace(/feat\..*$/i,"").replace(/&.*$/,"") );
- const t=norm(s.title.replace(/\(.+?\)/g,"").replace(/- remaster.*$/i,""));
- const xa=norm(x.artistName), xt=norm(x.trackName); let z=0;
- if(xt===t)z+=100; else if(xt.includes(t)||t.includes(xt))z+=65;
- if(xa===a)z+=70; else if(xa.includes(a)||a.includes(xa))z+=45;
- if(x.previewUrl)z+=20; return z;
+ const a=norm(cleanArtist(s.artist)), t=norm(cleanTitle(s.title));
+ const xa=norm(x.artistName), xt=norm(x.trackName);
+ let z=0;
+ if(xt===t)z+=120;
+ else if(xt.includes(t)||t.includes(xt))z+=70;
+ else {
+   const tw=t.split(" ").filter(w=>w.length>2);
+   const hit=tw.filter(w=>xt.includes(w)).length;
+   z+=Math.min(45,hit*12);
+ }
+ if(xa===a)z+=85;
+ else if(xa.includes(a)||a.includes(xa))z+=50;
+ else {
+   const aw=a.split(" ").filter(w=>w.length>2);
+   const hit=aw.filter(w=>xa.includes(w)).length;
+   z+=Math.min(30,hit*10);
+ }
+ if(x.previewUrl)z+=20;
+ return z;
 }
 async function itunesTry(term,country){
- const u="https://itunes.apple.com/search?term="+encodeURIComponent(term)+"&country="+country+"&media=music&entity=song&limit=25";
+ const u="https://itunes.apple.com/search?term="+encodeURIComponent(term)+"&country="+country+"&media=music&entity=song&limit=35";
+ // Modern browsers first: fetch. If Apple/browser rejects CORS, fall back to JSONP.
+ try{
+   const r=await fetch(u+"&_="+Date.now(),{mode:"cors",cache:"no-store"});
+   if(r.ok){
+     const j=await r.json();
+     if(j && Array.isArray(j.results))return j;
+   }
+ }catch(e){}
  try{return await jsonp(u)}catch(e){return null}
 }
-async function findPreview(s){
- let key=s.artist+"|"+s.title;if(previewCache.has(key))return previewCache.get(key);
- const variants=[s.artist+" "+s.title,s.title+" "+s.artist,s.artist.replace(/feat\..*$/i,"")+" "+s.title.replace(/\(.+?\)/g,"")];
+async function findPreview(song){
+ const key=clipKey(song);
+ const cached=previewCache.get(key);
+ if(cached)return cached; // Only successful URLs are cached.
+
+ const ca=cleanArtist(song.artist), ct=cleanTitle(song.title);
+ const variants=[
+   song.artist+" "+song.title,
+   ca+" "+ct,
+   ct+" "+ca,
+   '"'+ct+'" '+ca
+ ].filter((v,i,a)=>v && a.indexOf(v)===i);
+
  let all=[];
- for(const country of ["DE","US"]){
+ for(const country of ["DE","US","GB"]){
    for(const q of variants){
-     const j=await itunesTry(q,country); if(j?.results) all.push(...j.results.filter(x=>x.previewUrl));
-     if(all.length){
-       all.sort((a,b)=>scoreHit(b,s)-scoreHit(a,s));
-       if(scoreHit(all[0],s)>=75){previewCache.set(key,all[0].previewUrl);return all[0].previewUrl}
+     const j=await itunesTry(q,country);
+     if(j?.results?.length){
+       all.push(...j.results.filter(x=>x.previewUrl));
+       all.sort((a,b)=>scoreHit(b,song)-scoreHit(a,song));
+       const best=all[0];
+       if(best && scoreHit(best,song)>=105){
+         previewCache.set(key,best.previewUrl);
+         return best.previewUrl;
+       }
      }
    }
  }
- all.sort((a,b)=>scoreHit(b,s)-scoreHit(a,s));
- let url=all[0]?.previewUrl||null; previewCache.set(key,url); return url;
+ all.sort((a,b)=>scoreHit(b,song)-scoreHit(a,song));
+ const best=all[0];
+ if(best && scoreHit(best,song)>=70){
+   previewCache.set(key,best.previewUrl);
+   return best.previewUrl;
+ }
+ // Do not cache failures: next attempt may succeed.
+ return null;
 }
-let audioReady=false, prefetching=null;
-const SILENT_CLIP="data:audio/wav;base64,UklGRqQCAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YYACAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
+let audioReady=false, prefetching=null, preparedUrl=null, previewUnavailable=false;
+const SILENT_CLIP="data:audio/wav;base64,UklGRqQCAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YYACAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
 function unlockAudio(){
- // Muss synchron aus der Nutzergeste laufen: iOS gibt das Element erst nach
- // einer echten Wiedergabe frei. Danach sind spaetere Quellwechsel erlaubt.
  if(audioReady)return;
  try{
   audio.src=SILENT_CLIP;
@@ -824,15 +875,35 @@ function unlockAudio(){
 }
 function prefetchCurrent(){
  if(!current)return;
- prefetching=findPreview(current).catch(()=>null);
+ preparedUrl=null;
+ previewUnavailable=false;
+ const k=clipKey(current);
+ if(previewCache.get(k)){
+   preparedUrl=previewCache.get(k);
+   $("clipstate").textContent="Ausschnitt bereit";
+   $("cliphint").textContent="Tippe auf Abspielen";
+   return;
+ }
+ prefetching=findPreview(current).then(url=>{
+   if(current && clipKey(current)===k && url){
+     preparedUrl=url;
+     $("clipstate").textContent="Ausschnitt bereit";
+     $("cliphint").textContent="Tippe auf 30 Sek. abspielen";
+   }
+   return url;
+ }).catch(()=>null);
 }
 function clipKey(s){return s.artist+"|"+s.title}
 
-function skipClip(){
- $("clipstate").textContent="Kein Ausschnitt gefunden – Song wird automatisch übersprungen";
- $("cliphint").textContent="Es geht sofort mit einem anderen Titel weiter";
+function noPreview(){
+ previewUnavailable=true;
+ preparedUrl=null;
+ $("clipstate").textContent="Für diesen Titel wurde kein Ausschnitt gefunden";
+ $("cliphint").textContent="Tippe unten auf „Anderen Song“";
  $("play").disabled=false;
- setTimeout(()=>nextRound(),900);
+ $("play").textContent="↻ Anderen Song";
+ $("stop").disabled=true;
+ if($("startupHint"))$("startupHint").textContent="Keine Preview verfügbar – anderen Song wählen";
 }
 
 function runTimer(){
@@ -845,11 +916,12 @@ function runTimer(){
  },250);
 }
 
-// Setzt Quelle und startet. Muss synchron aufgerufen werden, solange die
-// Nutzergeste gilt - deshalb kein await davor.
 function startClip(url){
- if(!url){skipClip();return}
- audio.src=url; audio.load(); remaining=30;$("timer").textContent=30;
+ if(!url){noPreview();return}
+ preparedUrl=url;
+ audio.src=url;
+ audio.load();
+ remaining=30;$("timer").textContent=30;
  let p;
  try{p=audio.play()}catch(e){p=Promise.reject(e)}
  Promise.resolve(p).then(()=>{
@@ -857,29 +929,50 @@ function startClip(url){
   $("cliphint").textContent="Jetzt zeitlich einordnen";
   if($("startupHint"))$("startupHint").textContent="Song läuft – danach in die Timeline einordnen";
   $("stop").disabled=false;
+  $("play").disabled=true;
   runTimer();
  }).catch(()=>{
-  $("clipstate").textContent="Ton konnte nicht starten – nochmal tippen";
-  $("cliphint").textContent="Beim iPhone auch den Stummschalter am Gehäuse prüfen";
+  $("clipstate").textContent="Ausschnitt bereit – Safari braucht noch einen Tipp";
+  $("cliphint").textContent="Tippe erneut auf „30 Sek. abspielen“";
   $("play").disabled=false;
+  $("play").textContent="▶ 30 Sek. abspielen";
  });
 }
 
 function play(){
- $("play").disabled=true;
- const k=clipKey(current);
- if(previewCache.has(k)){
-  // Normalfall: Vorabsuche ist durch, Wiedergabe startet ohne Umweg
-  startClip(previewCache.get(k));
-  return;
+ if(previewUnavailable){
+   nextRound();
+   return;
  }
- // Suche laeuft noch: Element freischalten, damit der spaetere Start erlaubt bleibt
+ $("play").disabled=true;
  unlockAudio();
- $("clipstate").textContent="Ausschnitt wird geladen …";
+
+ const k=clipKey(current);
+ const ready=preparedUrl || previewCache.get(k);
+ if(ready){
+   // Audio starts directly inside this user gesture – important for iPhone/Safari.
+   $("play").textContent="▶ 30 Sek. abspielen";
+   startClip(ready);
+   return;
+ }
+
+ $("clipstate").textContent="Ausschnitt wird gesucht …";
+ $("cliphint").textContent="Bitte kurz warten";
  Promise.resolve(prefetching||findPreview(current))
   .catch(()=>null)
-  .then(url=>startClip(url));
+  .then(url=>{
+    if(!url){noPreview();return}
+    preparedUrl=url;
+    // Do NOT auto-play after the network promise on iOS.
+    // Ask for a second tap so playback is tied to a real user gesture.
+    $("clipstate").textContent="Ausschnitt bereit";
+    $("cliphint").textContent="Jetzt erneut auf Abspielen tippen";
+    $("play").disabled=false;
+    $("play").textContent="▶ 30 Sek. abspielen";
+    if($("startupHint"))$("startupHint").textContent="Preview geladen – jetzt Song starten";
+  });
 }
+
 audio.addEventListener("ended",()=>{if(!audio.src.startsWith("data:"))stop()});
 function stop(){clearInterval(timerId);audio.pause();$("stop").disabled=true;$("play").disabled=false;$("play").textContent="▶ Nochmal abspielen"}
 function confirm(){
@@ -932,7 +1025,7 @@ function updatePoolCount(){
 }
 document.addEventListener("DOMContentLoaded",()=>{
   if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-    navigator.serviceWorker.register("./sw.js?v=813",{updateViaCache:"none"})
+    navigator.serviceWorker.register("./sw.js?v=814",{updateViaCache:"none"})
       .then(reg=>reg.update()).catch(()=>{});
   }
   document.body.classList.remove("game-started");
@@ -1076,5 +1169,5 @@ document.addEventListener("DOMContentLoaded",()=>{
 }
 @media(min-height:900px){.genrechecks{max-height:40dvh}}
 </style>
-<div class="versiontag">v8.13</div>
+<div class="versiontag">v8.14</div>
 </body></html>
