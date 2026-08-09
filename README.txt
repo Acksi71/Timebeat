@@ -1,19 +1,12 @@
-TIMEBEAT ULTRA v8.14 – iPhone Preview Fix
+TIMEBEAT ULTRA v8.15 – iPhone Preview Preflight
 
-Behoben:
-- Preview-Fehler werden nicht mehr als dauerhaftes null gecacht.
-- iTunes-Suche probiert Fetch und JSONP sowie DE/US/GB.
-- Mehr Suchvarianten und bessere Trefferbewertung.
-- Kein automatisches Überspringen mehr bei fehlender Preview.
-- Auf iPhone startet eine noch nicht vorgeladene Preview bewusst erst beim zweiten Tipp:
-  1. Tipp lädt/sucht den Ausschnitt.
-  2. Tipp startet Audio direkt aus der Nutzergeste.
-- Wenn keine Preview existiert: Button „Anderen Song“.
+Neu:
+- Eine Runde wird erst freigegeben, wenn Apple tatsächlich eine previewUrl geliefert hat.
+- Bis zu 12 Kandidaten werden unsichtbar geprüft.
+- Der Abspielbutton führt keinerlei Netzwerksuche mehr aus; er startet nur die bereits gefundene URL.
+- JSONP wird auf Apple Search zuerst probiert, Fetch nur als Fallback.
+- Diagnosezeile unterscheidet Apple-API-Fehler von Safari-Audio-Blockade.
 
-GitHub:
-Alle Dateien dieses Pakets über die vorhandenen Dateien hochladen und committen.
-
-Test danach in Safari:
-https://acksi71.github.io/Timebeat/?v=814
-
-Unten rechts muss v8.14 stehen.
+GitHub: Dateien ersetzen und committen.
+Test: https://acksi71.github.io/Timebeat/?v=815
+Unten rechts muss v8.15 stehen.
